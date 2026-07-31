@@ -1,0 +1,117 @@
+// Prisma Schema for AI Personalized Learning Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  email        String          @unique
+  passwordHash String
+  name         String
+  role         String          @default("STUDENT") // STUDENT | TEACHER | ADMIN
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  profile      LearnerProfile?
+  interactions Interaction[]
+  masteries    TopicMastery[]
+}
+
+model LearnerProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningStyle    String   @default("VISUAL") // VISUAL | AUDITORY | READING | KINESTHETIC
+  pacePreference   String   @default("MODERATE") // SLOW | MODERATE | FAST
+  overallSkill     Int      @default(3) // 1-10
+  strengths        String   @default("[]") // JSON string array
+  weaknesses       String   @default("[]") // JSON string array
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  category    String
+  topics      Topic[]
+}
+
+model Topic {
+  id              String         @id @default(uuid())
+  subjectId       String
+  subject         Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name            String
+  description     String
+  orderIndex      Int
+  prerequisites   String         @default("[]") // JSON string array of Topic IDs
+  contentItems    ContentItem[]
+  masteries       TopicMastery[]
+}
+
+model ContentItem {
+  id              String        @id @default(uuid())
+  topicId         String
+  topic           Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title           String
+  summary         String
+  difficulty      Int           // 1 - 10
+  format          String        // VIDEO | TEXT | INTERACTIVE | QUIZ
+  textContent     String?
+  videoUrl        String?
+  interactiveData String?       // JSON string payload for interactive sandbox
+  tags            String        @default("[]") // JSON string array
+  questions       Question[]
+  interactions    Interaction[]
+}
+
+model Question {
+  id            String        @id @default(uuid())
+  contentItemId String
+  contentItem   ContentItem   @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  prompt        String
+  options       String        // JSON string array of choices
+  correctAnswer String
+  explanation   String
+  difficulty    Int           @default(3)
+  interactions  Interaction[]
+}
+
+model Interaction {
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId       String
+  contentItemId String
+  contentItem   ContentItem  @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  questionId    String?
+  question      Question?    @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  selectedAnswer String?
+  isCorrect     Boolean
+  timeSpentSec  Int
+  difficulty    Int
+  format        String
+  timestamp     DateTime     @default(now())
+}
+
+model TopicMastery {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId            String
+  topic              Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  masteryScore       Float    @default(0.0) // 0 - 100
+  consecutiveCorrect Int      @default(0)
+  consecutiveWrong   Int      @default(0)
+  currentDifficulty  Int      @default(3)
+  lastAttemptAt      DateTime @default(now())
+
+  @@unique([userId, topicId])
+}
