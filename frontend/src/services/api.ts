@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = 'https://ai-personalized-learning-platform-yidj.onrender.com/api';
 
 function getHeaders() {
   const token = localStorage.getItem('token');
